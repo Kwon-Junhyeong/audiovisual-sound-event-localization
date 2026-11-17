@@ -1,0 +1,8 @@
+__pycache__/
+work/
+baseline/
+data/
+ranking/raw_dets/
+ranking/srp_cache/
+ranking/submissions/
+ranking/*.npz
