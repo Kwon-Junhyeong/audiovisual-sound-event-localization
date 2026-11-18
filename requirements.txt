@@ -1,6 +1,4 @@
 numpy
-scipy
-soundfile
 Pillow
 torch
 torchvision
