@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Predictions: raw detections ranked by the reranker probability, and each box output as points
-across its predicted energy instead of a single peak.
-usage: predict.py <tag> [cap]
+"""Ranks the raw detections by the reranker probability and outputs each box as points at its
+strongest normalized energy values instead of a single peak.
+usage: predict.py [tag] [cap]
 """
 import os, sys, json, collections
 import numpy as np, torch
@@ -17,7 +17,7 @@ EVAL_W, EVAL_H = 100, 50                               # grid of the reference e
 
 
 def mask_points(emap, box, n_points=N_POINTS):
-    """Energy map of one box resized to the box on the reference grid; the n strongest cells as (x, y, energy)."""
+    """Resizes the energy map of one box to the box on the reference grid. Returns the n strongest cells as (x, y, energy)."""
     sx, sy = EVAL_W / IMG_W, EVAL_H / IMG_H
     ex1 = int(np.clip(round(float(box[0]) * sx), 0, EVAL_W - 1))
     ey1 = int(np.clip(round(float(box[1]) * sy), 0, EVAL_H - 1))

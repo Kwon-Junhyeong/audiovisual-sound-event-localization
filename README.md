@@ -4,21 +4,21 @@ For the DCASE 2026 Challenge, Task 3, audiovisual track, the system uses four mi
 
 ![System](docs/system.png)
 
-## Diagnosis first
+## Ranking was the problem
 
-With no confidence threshold, the official baseline's detector already finds 71% of the events (IoU 0.25), yet its mAP is 0.0003. The ranking fails, not the features. So the detector keeps up to 100 candidates per frame, with scores as low as 0.01 (`ranking/dump_detections.py`).
+With no confidence threshold, the official baseline's detector already finds 71% of the events (IoU 0.25), while its mAP is 0.0003. This points to the ranking. So the detector keeps up to 100 candidates per frame, with scores as low as 0.01 (`ranking/dump_detections.py`).
 
 ## Rerank by match probability
 
 A gradient-boosting model reads features of each candidate (detector score, energy-map statistics, box geometry, co-detections, SRP-PHAT direction) and predicts whether it will match a reference event. That probability replaces the detector's score (`ranking/rerank.py`, `ranking/srp_features.py`).
 
-## Output the whole energy region
+## Output the strongest energy points
 
-The reference field is dense, so each box outputs its predicted energy as points across the box instead of at a single peak (`ranking/predict.py`). The soft IoU with the reference rises from 0.27 to 0.84.
+The reference field is dense, so each box outputs points at its strongest normalized energy values instead of a single peak (`ranking/predict.py`). The soft IoU with the reference rises from 0.27 to 0.84.
 
 ## Results
 
-On the development set, mask output and reranking raised the system mAP from 0.0013 to 0.021 without retraining the detector, 70 times the mAP of the official baseline. In the official evaluation, the system had the highest AP75 of all 15 systems (0.0009), and the team placed third.
+On the development set, mask output and reranking raised the system mAP from 0.0013 to 0.021 without retraining the detector. The final mAP was 70 times the official baseline's. In the official evaluation, the system had the highest AP75 of all 15 systems (0.0009), and the team placed third.
 
 ## Run
 
