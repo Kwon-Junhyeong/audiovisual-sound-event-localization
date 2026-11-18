@@ -1,6 +1,6 @@
 # Audiovisual Sound Event Localization
 
-For the DCASE 2026 Challenge, Task 3, audiovisual track, the system uses four microphones and a 360-degree camera to find which of 13 sound classes are active and where each one is on the panorama, 10 times per second. The team placed third, and the system had the highest AP75 of all 15 systems in the official evaluation. Research internship at the KIST AI and Robotics Institute, Humanoid Research Center (2026). Technical report: [report/Kwon_KIST_task3_technical_report.pdf](report/Kwon_KIST_task3_technical_report.pdf).
+For the DCASE 2026 Challenge, Task 3, audiovisual track, the system uses four microphones and a 360-degree camera to find which of 13 sound classes are active and where each one is on the panorama, 10 times per second. The team placed third, and the system had the highest AP75 of all 15 systems in the official evaluation. Research internship at the KIST AI and Robotics Institute, Humanoid Research Center (2026).
 
 ![System](docs/system.png)
 
@@ -14,7 +14,7 @@ A gradient-boosting model reads features of each candidate (detector score, ener
 
 ## Output the whole energy region
 
-The reference field is dense, so each box outputs its predicted energy as points across the box instead of at a single peak (`ranking/submit.py`). The soft IoU with the reference rises from 0.27 to 0.84.
+The reference field is dense, so each box outputs its predicted energy as points across the box instead of at a single peak (`ranking/predict.py`). The soft IoU with the reference rises from 0.27 to 0.84.
 
 ## Results
 
@@ -29,5 +29,5 @@ python detector/train.py            # detector on the dev clips
 python ranking/dump_detections.py CHECKPOINT N_CLIPS
 python ranking/srp_features.py TAG
 python ranking/rerank.py TAG
-python ranking/submit.py TAG
+python ranking/predict.py TAG
 ```

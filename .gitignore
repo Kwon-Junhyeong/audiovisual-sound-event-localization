@@ -4,5 +4,6 @@ baseline/
 data/
 ranking/raw_dets/
 ranking/srp_cache/
-ranking/submissions/
+ranking/gate_cache/
+ranking/predictions/
 ranking/*.npz

@@ -1,6 +1,7 @@
 numpy
 scipy
+soundfile
+Pillow
 torch
 torchvision
 scikit-learn
-matplotlib

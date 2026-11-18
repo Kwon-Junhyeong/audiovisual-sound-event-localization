@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Shared setup for the detector: paths, layout, dataset and model builders. Used by train and infer."""
+"""Shared setup for the detector: paths, layout, dataset and model builders."""
 import os, sys, glob, types
 
 TASK3 = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -151,3 +151,22 @@ def build_optimizer(m, lr=1e-4):
     ]
     pg = [{"params": p, "lr": l, "weight_decay": wd, "name": n} for (n, p, l, wd) in groups if p]
     return optim.AdamW(pg)
+
+IMG_W, IMG_H = 360, 180
+
+def frame_image(ext, wav_path, fi, frames_base=None):
+    """Detector input for one frame: RGB (ImageNet mean when the frame is missing) and 9 acoustic bands."""
+    import torch
+    ac = ext.get_frame_bands(wav_path, fi)          # (9,180,360)
+    fp = None
+    if frames_base:
+        split = os.path.basename(os.path.dirname(wav_path)); seq = os.path.basename(wav_path)[:-4]
+        fp = os.path.join(frames_base, split, seq, f"{seq}_{int(fi):04d}.jpg")
+    if fp and os.path.isfile(fp):
+        import numpy as np
+        from PIL import Image
+        img = Image.open(fp).convert("RGB").resize((IMG_W, IMG_H), Image.BILINEAR)
+        rgb = torch.from_numpy(np.asarray(img, dtype="float32") / 255.0).permute(2, 0, 1)
+    else:
+        rgb = torch.tensor([0.485, 0.456, 0.406]).view(3, 1, 1).expand(3, IMG_H, IMG_W).clone()
+    return torch.cat([rgb, ac], dim=0)

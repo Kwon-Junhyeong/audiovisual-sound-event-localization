@@ -8,7 +8,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "detector"))
 import common as C
 C.setup_paths()
 import numpy as np, torch
-from infer import frame_image
 
 CKPT=sys.argv[1]; NCLIP=int(sys.argv[2]) if len(sys.argv)>2 else 12
 STH=float(sys.argv[3]) if len(sys.argv)>3 else 0.01
@@ -39,7 +38,7 @@ for wi,wav in enumerate(wavs):
         B=8
         for s in range(0,nfr,B):
             idxs=list(range(s,min(s+B,nfr)))
-            imgs=[frame_image(ext,wav,fi,FRAMES,"blindfold").to(dev) for fi in idxs]
+            imgs=[C.frame_image(ext,wav,fi,FRAMES).to(dev) for fi in idxs]
             with torch.amp.autocast("cuda",enabled=True): dets=model(imgs)
             for fi,d in zip(idxs,dets):
                 bx=d.get("boxes"); lb=d.get("labels"); sc=d.get("scores"); em=d.get("energy_maps")

@@ -87,102 +87,23 @@ else:
     np.savez_compressed(FEATCACHE,F=F,sidx=sidx,bestgid=bestgid,bestiou=bestiou,score=score,ngt=ngt,biou=biou)
     print(f"[mcp] feat cache saved {FEATCACHE} dets={len(F)}")
 
-# SRP-PHAT direction features (same order as the features)
-USE_SRP = os.environ.get("USE_SRP","1")=="1"
+# SRP-PHAT direction feature (same order as the features)
 SRPDIR=os.path.join(os.path.dirname(__file__),"srp_cache",TAG)
-if USE_SRP and all(os.path.exists(os.path.join(SRPDIR,s+".npy")) for s in seqs):
+if all(os.path.exists(os.path.join(SRPDIR,s+".npy")) for s in seqs):
     srp_all=np.concatenate([np.load(os.path.join(SRPDIR,s+".npy")) for s in seqs]).astype(np.float32)
-    if len(srp_all)==len(F):
-        F=np.column_stack([F, srp_all]); print(f"[mcp] +SRP feature (dets={len(F)})")
-    else: print(f"[mcp] SRP len mismatch {len(srp_all)} vs {len(F)} — skip")
+    if len(srp_all)==len(F): F=np.column_stack([F, srp_all])
 y=(bestiou>=IOU).astype(int)
-NGT=int(ngt.sum())
-print(f"[mcp] {TAG} dets={len(F)} feats={F.shape[1]} matchable@{IOU}={int(y.sum())} ({y.mean()*100:.1f}%) NGT={NGT}")
+print(f"[mcp] {TAG} dets={len(F)} feats={F.shape[1]} matchable@{IOU}={int(y.sum())} ({y.mean()*100:.1f}%)")
 
-import time as _t
-from sklearn.ensemble import HistGradientBoostingClassifier, HistGradientBoostingRegressor
-MODE=os.environ.get("MCP_MODE","clf")  # clf, regr (best IoU) or perclass
-nseq=len(seqs); fold=np.array([s%3 for s in range(nseq)])
+# match probability, cross-fitted over three clip folds
+from sklearn.ensemble import HistGradientBoostingClassifier
+fold=np.array([s%3 for s in range(len(seqs))])
 pmcp=np.zeros(len(F))
-# class array for the perclass mode
-_cl=[]
-for s in seqs: _cl.append(np.load(os.path.join(DET,s+".npz"))["cls"])
-CLS_=np.concatenate(_cl)
 for fo in range(3):
-    t0=_t.time()
     tr=np.isin(sidx,np.where(fold!=fo)[0]); te=np.isin(sidx,np.where(fold==fo)[0])
     if te.sum()==0 or y[tr].sum()==0: continue
-    if MODE=="regr":
-        rg=HistGradientBoostingRegressor(max_iter=150,max_depth=6,learning_rate=0.1,
-             l2_regularization=1.0,min_samples_leaf=100,early_stopping=True,validation_fraction=0.1)
-        rg.fit(F[tr],bestiou[tr]); pmcp[te]=rg.predict(F[te])
-    elif MODE=="perclass":
-        for c in range(NC):
-            mtr=tr&(CLS_==c); mte=te&(CLS_==c)
-            if mte.sum()==0: continue
-            if mtr.sum()<200 or y[mtr].sum()<5: pmcp[mte]=F[mte][:,0]; continue  # fallback=score
-            clf=HistGradientBoostingClassifier(max_iter=100,max_depth=5,min_samples_leaf=60,early_stopping=True,validation_fraction=0.12)
-            clf.fit(F[mtr],y[mtr]); pmcp[mte]=clf.predict_proba(F[mte])[:,1]
-    else:
-        clf=HistGradientBoostingClassifier(max_iter=120,max_depth=6,learning_rate=0.1,
-             l2_regularization=1.0,min_samples_leaf=100,early_stopping=True,validation_fraction=0.1)
-        clf.fit(F[tr],y[tr]); pmcp[te]=clf.predict_proba(F[te])[:,1]
-    print(f"  fold{fo} fit {_t.time()-t0:.0f}s tr={tr.sum()} pos={int(y[tr].sum())} mode={MODE}",flush=True)
+    clf=HistGradientBoostingClassifier(max_iter=120,max_depth=6,learning_rate=0.1,
+         l2_regularization=1.0,min_samples_leaf=100,early_stopping=True,validation_fraction=0.1)
+    clf.fit(F[tr],y[tr]); pmcp[te]=clf.predict_proba(F[te])[:,1]
 np.savez_compressed(os.path.join(os.path.dirname(__file__),f"mcp_scores_{TAG}.npz"),
                     pmcp=pmcp.astype(np.float32), sidx=sidx, seqs=np.array(seqs))
-
-# fast AP: best reference per detection computed once, greedy claim per ranking
-clsarr=None  # classes come from the raw detections
-# rebuild the class array if it is not cached
-if "clsarr" not in dir() or clsarr is None:
-    cl_list=[]
-    for si,seq in enumerate(seqs):
-        z=np.load(os.path.join(DET,seq+".npz")); cl_list.append(z["cls"])
-    clsarr=np.concatenate(cl_list)
-RR=np.linspace(0,1,101)
-def ap101(tp, n_gt):   # tp: 0/1 in rank order, 101-point interpolation
-    tpc=np.cumsum(tp); fpc=np.cumsum(1-tp); rec=tpc/n_gt; prec=tpc/np.maximum(tpc+fpc,1e-9)
-    mpre=np.maximum.accumulate(prec[::-1])[::-1]
-    idx=np.searchsorted(rec,RR,side='left'); vals=np.zeros(101)
-    ok=idx<len(rec); vals[ok]=mpre[idx[ok]]
-    return float(vals.mean())
-def greedy_tp(order, thr):
-    bg=bestgid[order]; bi=bestiou[order]; tp=np.zeros(len(order))
-    cand=np.where(bi>=thr)[0]   # matchable detections only, in rank order
-    bgc=bg[cand].astype(int); claimed=set()
-    for k,r in enumerate(cand):
-        g=bgc[k]
-        if g>=0 and g not in claimed: claimed.add(g); tp[r]=1
-    return tp
-def ap_rank(key, thr):
-    aps=[]; allk=[]; allt=[]
-    for c in range(NC):
-        if ngt[c]==0: continue
-        idx=np.where(clsarr==c)[0]
-        if len(idx)==0: aps.append(0.0); continue
-        order=idx[np.argsort(-key[idx])]; tp=greedy_tp(order,thr)
-        aps.append(ap101(tp,ngt[c])); allk.append(key[order]); allt.append(tp)
-    macro=float(np.mean(aps)) if aps else float("nan")
-    K=np.concatenate(allk); T=np.concatenate(allt); o=np.argsort(-K)
-    micro=ap101(T[o],NGT)
-    return round(macro,4),round(micro,4)
-
-import time as _t2
-t0=_t2.time(); cur=ap_rank(score,IOU); mcp=ap_rank(pmcp,IOU); orc=ap_rank(bestiou,IOU)
-print(f"  ap_rank x3 {_t2.time()-t0:.0f}s",flush=True)
-def rec(a,b,o): return round(100*(b-a)/max(o-a,1e-9),1)
-out={"tag":TAG,"iou":IOU,"n_det":len(F),"matchable_pct":round(float(y.mean()),3),
- "macro_current":cur[0],"macro_mcp":mcp[0],"macro_oracle":orc[0],"macro_recovery_pct":rec(cur[0],mcp[0],orc[0]),
- "micro_current":cur[1],"micro_mcp":mcp[1],"micro_oracle":orc[1],"micro_recovery_pct":rec(cur[1],mcp[1],orc[1])}
-print(json.dumps(out,ensure_ascii=False,indent=2),flush=True)
-json.dump(out,open(os.path.join(os.path.dirname(__file__),f"mcp_rerank_{TAG}_{IOU}.json"),"w"),ensure_ascii=False,indent=2)
-clf=HistGradientBoostingClassifier(max_iter=120,max_depth=6,early_stopping=True).fit(F,y)
-from sklearn.inspection import permutation_importance
-ss=np.random.RandomState(0).choice(len(F),min(25000,len(F)),replace=False)
-imp=permutation_importance(clf,F[ss],y[ss],n_repeats=2,random_state=0)
-names=["score","area","elev","asp","fcnt","fccnt","closure","diffuse","emax","emean","eprom","econc","eentropy","estd","poff","nmsr"]
-if F.shape[1]==17: names=names+["srp"]
-elif F.shape[1]==18: names=names+["srp","srp_rank"]
-order=np.argsort(-imp.importances_mean)
-print("feat_importance:",{names[i]:round(float(imp.importances_mean[i]),4) for i in order[:8]})
-json.dump(out,open(os.path.join(os.path.dirname(__file__),f"mcp_rerank_{TAG}_{IOU}.json"),"w"),ensure_ascii=False,indent=2)
