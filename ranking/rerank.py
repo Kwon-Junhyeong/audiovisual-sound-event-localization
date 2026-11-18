@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Reranking: per-detection features from the raw detections; a gradient-boosting model cross-fitted over clip folds
 predicts whether each candidate matches a reference event, and that probability replaces the detector score.
-- features: raw score, energy map (prominence, concentration, entropy, max, mean, std), box geometry,
-  co-detection density, SRP-PHAT direction dominance. label: matches a reference event at the IoU threshold.
+- 16 features: raw score, box geometry, co-detection counts, energy-map statistics, NMS dominance and two
+  acoustic gates. label: matches a reference event at the IoU threshold.
 usage: rerank.py <tag> [iou]"""
 import os, sys, json, glob, collections
 import numpy as np
@@ -87,11 +87,6 @@ else:
     np.savez_compressed(FEATCACHE,F=F,sidx=sidx,bestgid=bestgid,bestiou=bestiou,score=score,ngt=ngt,biou=biou)
     print(f"[mcp] feat cache saved {FEATCACHE} dets={len(F)}")
 
-# SRP-PHAT direction feature (same order as the features)
-SRPDIR=os.path.join(os.path.dirname(__file__),"srp_cache",TAG)
-if all(os.path.exists(os.path.join(SRPDIR,s+".npy")) for s in seqs):
-    srp_all=np.concatenate([np.load(os.path.join(SRPDIR,s+".npy")) for s in seqs]).astype(np.float32)
-    if len(srp_all)==len(F): F=np.column_stack([F, srp_all])
 y=(bestiou>=IOU).astype(int)
 print(f"[mcp] {TAG} dets={len(F)} feats={F.shape[1]} matchable@{IOU}={int(y.sum())} ({y.mean()*100:.1f}%)")
 

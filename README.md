@@ -10,11 +10,11 @@ With no confidence threshold, the official baseline's detector already finds 71%
 
 ## Rerank by match probability
 
-A gradient-boosting model reads features of each candidate (detector score, energy-map statistics, box geometry, co-detections, SRP-PHAT direction) and predicts whether it will match a reference event. That probability replaces the detector's score (`ranking/rerank.py`, `ranking/srp_features.py`).
+A gradient-boosting model reads 16 features of each candidate (detector score, box geometry, co-detections, energy-map statistics) and predicts whether it will match a reference event. That probability replaces the detector's score (`ranking/rerank.py`).
 
-## Output the strongest energy points
+## Nine points per box
 
-The reference field is dense, so each box outputs points at its strongest normalized energy values instead of a single peak (`ranking/predict.py`). The soft IoU with the reference rises from 0.27 to 0.84.
+The reference field is dense, so each kept box is written as a mask instead of a single peak: its 28 x 28 energy map sampled on a 3 x 3 grid inside the box, nine points with position and intensity. The soft IoU with the reference rises from 0.27 to 0.84. The 3 x 3 grid gives the overlap of a denser grid and keeps every result file under the 20 MB submission limit.
 
 ## Results
 
@@ -27,7 +27,5 @@ The code builds on the official baseline repository. Set `BASELINE_DIR` to it an
 ```sh
 python detector/train.py            # detector on the dev clips
 python ranking/dump_detections.py CHECKPOINT N_CLIPS
-python ranking/srp_features.py TAG
 python ranking/rerank.py TAG
-python ranking/predict.py TAG
 ```
