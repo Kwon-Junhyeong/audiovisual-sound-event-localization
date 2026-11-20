@@ -1,6 +1,6 @@
 # Audiovisual Sound Event Localization
 
-For the DCASE 2026 Challenge, Task 3, audiovisual track, the system uses four microphones and a 360-degree camera to find which of 13 sound classes are active and where each one is on the panorama, 10 times per second. The team placed third, and the system had the highest AP75 of all 15 systems in the official evaluation. Research internship at the KIST AI and Robotics Institute, Humanoid Research Center (2026).
+For the DCASE 2026 Challenge, Task 3, audiovisual track, the system uses four microphones and a 360-degree camera to find which of 13 sound classes are active and where each one is on the panorama, 10 times per second. The system took 3rd place in the ranking and had the highest AP75 of all 15 systems in the official evaluation. Research internship at the KIST AI and Robotics Institute, Humanoid Research Center (2026).
 
 ![System](docs/system.png)
 
@@ -18,7 +18,7 @@ The reference field is dense, so each kept box is written as a mask instead of a
 
 ## Results
 
-On the development set, mask output and reranking raised the system mAP from 0.0013 to 0.021 without retraining the detector. The final mAP was 70 times the official baseline's. In the official evaluation, the system had the highest AP75 of all 15 systems (0.0009), and the team placed third.
+On the development set, mask output and reranking raised the system mAP from 0.0013 to 0.021 without retraining the detector. The final mAP was 70 times the official baseline's. In the official evaluation, the system had the highest AP75 of all 15 systems (0.0009) and took 3rd place in the ranking.
 
 ## Run
 

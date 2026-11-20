@@ -59,7 +59,7 @@ else:
         k=max(1,int(0.1*e.shape[1])); conc=np.partition(e,-k,axis=1)[:,-k:].sum(1)/s
         prom=mx/(mn+1e-6)
         EW=int(round(e.shape[1]**0.5)); ctr=(EW-1)/2.0; mxd=(2*ctr**2)**0.5
-        pk=e.argmax(1); poff=np.sqrt((pk//EW-ctr)**2+(pk%EW-ctr)**2)/max(mxd,1e-6)  # offset of the energy peak from the box centre
+        pk=e.argmax(1); poff=np.sqrt((pk//EW-ctr)**2+(pk%EW-ctr)**2)/max(mxd,1e-6)  # offset of the energy peak from the box center
         area=(bx[:,2]-bx[:,0])*(bx[:,3]-bx[:,1])/(360*180); elev=(bx[:,1]+bx[:,3])/2/180
         asp=(bx[:,2]-bx[:,0])/np.maximum(bx[:,3]-bx[:,1],1)
         fcount=collections.Counter(fi.tolist()); fccount=collections.Counter(zip(fi.tolist(),cl.tolist()))
