@@ -5,3 +5,4 @@ data/
 ranking/raw_dets/
 ranking/gate_cache/
 ranking/*.npz
+ranking/predictions/

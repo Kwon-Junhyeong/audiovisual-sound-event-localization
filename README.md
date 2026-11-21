@@ -14,7 +14,7 @@ A gradient-boosting model reads 16 features of each candidate (detector score, b
 
 ## Nine points per box
 
-The reference field is dense, so each kept box is written as a mask instead of a single peak: its 28 x 28 energy map sampled on a 3 x 3 grid inside the box, nine points with position and intensity. The soft IoU with the reference rises from 0.27 to 0.84. The 3 x 3 grid gives the overlap of a denser grid and keeps every result file under the 20 MB submission limit.
+The reference field is dense, so each kept box is written as a mask instead of a single peak: its 28 x 28 energy map sampled on a 3 x 3 grid inside the box, nine points with position and intensity (`ranking/write_masks.py`). The soft IoU with the reference rises from 0.27 to 0.84. The 3 x 3 grid gives the overlap of a denser grid and keeps every result file under the 20 MB submission limit.
 
 ## Results
 
@@ -28,4 +28,5 @@ The code builds on the official baseline repository. Set `BASELINE_DIR` to it an
 python detector/train.py            # detector on the dev clips
 python ranking/dump_detections.py CHECKPOINT N_CLIPS
 python ranking/rerank.py TAG
+python ranking/write_masks.py TAG         # one JSON file per clip
 ```
